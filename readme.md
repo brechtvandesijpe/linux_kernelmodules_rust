@@ -24,3 +24,9 @@ make menuconfig
 -> enable each menu you have to follow and enter it, then enable your module
 
 touch samples/rust/module-name.rs
+
+# Build & Run
+
+Build is in ./build.sh
+
+Run is in ./run.sh
