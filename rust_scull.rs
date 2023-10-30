@@ -1,5 +1,6 @@
+use kernel::io_buffer::IoBufferWriter;
 use kernel::prelude::*;
-use kernel::{file, miscdev};
+use kernel::{ file, miscdev };
 
 module! {
     type: Scull,
@@ -13,18 +14,26 @@ struct Scull {
 
 #[vtable]
 impl file::Operations for Scull {
-    fn open(_context: &Self::OpenData, _file: &file::File) -> Result {
+    fn open(_context: &Self::OpenData, _file: &file::File) -> Result<Self::Data> {
         pr_info!("File was opened!\n");
         Ok(())
     }
 
-    fn read()
+    fn read(
+        _data: (),
+        _file: &file::File,
+        _writer: &mut impl IoBufferWriter,
+        _offset: u64,
+    ) -> Result<usize> {
+        pr_info!("File was read\n");
+        Ok(0)
+    }
 }
 
 impl kernel::Module for Scull {
     fn init(_name: &'static CStr, _module: &'static ThisModule) -> Result<Self> {
         pr_info!("Hello scull!\n");
-        let reg = miscdev::Registration::<Scull>::new_pinned(fmt!("scull"), ())?;
+        let reg = miscdev::Registration::new_pinned(fmt!("scull"), ())?;
         Ok(Self { _dev: reg })
     }
 }
