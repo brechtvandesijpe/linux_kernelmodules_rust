@@ -7,3 +7,9 @@ rustup override set $(scripts/min-tool-version.sh rustc)
 rustup component add rust-src
 make allnoconfig qemu-busybox-min.config rust.config
 make
+
+# Modify Kconfig and Makefile
+make menuconfig
+-> / and search the newly added module in Kconfig and Makefile
+-> enable each menu you have to follow and enter it, then enable your module
+touch samples/rust/< module-name >.rs
