@@ -23,4 +23,4 @@ make menuconfig
 
 -> enable each menu you have to follow and enter it, then enable your module
 
-touch samples/rust/<module-name>.rs
+touch samples/rust/module-name.rs
