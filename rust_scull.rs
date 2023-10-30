@@ -1,4 +1,4 @@
-use kernel::io_buffer::IoBufferWriter;
+use kernel::io_buffer::{ IoBufferReader, IoBufferWriter };
 use kernel::prelude::*;
 use kernel::{ file, miscdev };
 
@@ -27,6 +27,16 @@ impl file::Operations for Scull {
     ) -> Result<usize> {
         pr_info!("File was read\n");
         Ok(0)
+    }    
+
+    fn write(
+        _data: (),
+        _file: &file::File,
+        reader: &mut impl IoBufferReader,
+        _offset: u64,
+    ) -> Result<usize> {
+        pr_info!("File was written\n");
+        Ok(reader.len())
     }
 }
 
