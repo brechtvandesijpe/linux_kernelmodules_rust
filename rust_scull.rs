@@ -20,29 +20,30 @@ struct Device {
 #[vtable]
 impl file::Operations for Scull {
     type OpenData = Arc<Device>;
+    type Data = Arc<Device>;
 
-    fn open(context: &Arc<Device>, _file: &file::File) -> Result<Self::Data> {
-        pr_info!("File was opened!\n");
-        Ok(())
+    fn open(context: &Arc<Device>, _file: &file::File) -> Result<Arc<Device>> {
+        pr_info!("File for device {} was opened\n", context.number);
+        Ok(context.clone())
     }
 
     fn read(
-        _data: (),
+        data: ArcBorrow<'_, Device>,
         _file: &file::File,
         _writer: &mut impl IoBufferWriter,
         _offset: u64,
     ) -> Result<usize> {
-        pr_info!("File was read\n");
+        pr_info!("File for device {} was read\n", data.number);
         Ok(0)
     }    
 
     fn write(
-        _data: (),
+        data: ArcBorrow<'_, Device>,
         _file: &file::File,
         reader: &mut impl IoBufferReader,
         _offset: u64,
     ) -> Result<usize> {
-        pr_info!("File was written\n");
+        pr_info!("File for device {} was written\n", data.number);
         Ok(reader.len())
     }
 }
