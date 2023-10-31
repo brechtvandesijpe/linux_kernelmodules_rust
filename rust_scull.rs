@@ -1,6 +1,7 @@
 use kernel::io_buffer::{ IoBufferReader, IoBufferWriter };
 use kernel::prelude::*;
 use kernel::{ file, miscdev };
+use kernel::sync::{Arc, ArcBorrow};
 
 module! {
     type: Scull,
@@ -12,9 +13,15 @@ struct Scull {
     _dev: Pin<Box<miscdev::Registration<Scull>>>,
 }
 
+struct Device {
+    number: usize,
+}
+
 #[vtable]
 impl file::Operations for Scull {
-    fn open(_context: &Self::OpenData, _file: &file::File) -> Result<Self::Data> {
+    type OpenData = Arc<Device>;
+
+    fn open(context: &Arc<Device>, _file: &file::File) -> Result<Self::Data> {
         pr_info!("File was opened!\n");
         Ok(())
     }
@@ -43,7 +50,10 @@ impl file::Operations for Scull {
 impl kernel::Module for Scull {
     fn init(_name: &'static CStr, _module: &'static ThisModule) -> Result<Self> {
         pr_info!("Hello scull!\n");
-        let reg = miscdev::Registration::new_pinned(fmt!("scull"), ())?;
+
+        let dev = Arc::try_new(Device { number: 0})?;
+        let reg = miscdev::Registration::new_pinned(fmt!("scull"), dev)?;
+        
         Ok(Self { _dev: reg })
     }
 }
