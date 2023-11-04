@@ -37,6 +37,9 @@ impl file::Operations for Scull {
         pr_info!("File for device {} was read\n", data.number);
         let vec = data.contents.lock();
         let offset = offset.try_into()?;
+        let len = core::cmp::min(writer.len(), vec.len().saturating_sub(offset));
+        writer.write_slice(&vec[offset..][..len])?;
+        Ok(len)
     }    
 
     fn write(
