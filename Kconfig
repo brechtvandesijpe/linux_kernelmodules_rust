@@ -155,7 +155,17 @@ config SAMPLE_RUST_SCULL
 	  This option builds the Rust scull module sample.
 
 	  To compile this as a module, choose M here:
-	  the module will be called rust_echo_server.
+	  the module will be called rust_scull.
+
+	  If unsure, say N.
+
+config SAMPLE_RUST_PROCFS_TEST
+	tristate "Procfs test module"
+	help
+	  This option builds the Rust procfs test module sample.
+
+	  To compile this as a module, choose M here:
+	  the module will be called rust_procfs_test.
 
 	  If unsure, say N.
 
