@@ -1,6 +1,8 @@
 use kernel::prelude::*;
-use kernel::bindings::{proc_mkdir, proc_create, file_operations, proc_ops};
-use kernel::c_str;
+use kernel::bindings::{ proc_mkdir, proc_create, copy_to_user, copy_from_user, proc_ops, proc_dir_entry, loff_t };
+use kernel::bindings::file as c_file;
+use core::ptr::null_mut;
+use core::ffi::{ c_char, c_void };
 
 module! {
     type: ProcFsTest,
@@ -10,49 +12,74 @@ module! {
 
 struct ProcFsTest;
 
-struct ProcFile {
-    proc_folder: *mut kernel::bindings::proc_dir_entry,
-    proc_file: *mut kernel::bindings::proc_dir_entry,
-}
-
-impl ProcFile {
-    fn new() -> Result<Self> {
-        let proc_folder = unsafe { proc_mkdir(c_str!("hello").as_ptr(), core::ptr::null_mut()); };
-        let proc_file = unsafe { proc_create(c_str!("dummy").as_ptr(), 0o644, proc_folder, &mut FILE_OPERATIONS); };
-        Ok(Self {
-            proc_folder,
-            proc_file,
-        })
-    }
-
-    fn read(&self) {
-    
-    }
-    
-    fn write(&self) {
-    
-    }
-}
-
-unsafe extern "C" fn read_callback() {
-    // Get a reference to the ProcFile instance and call its read method
-    // You'll need to store the ProcFile instance somewhere accessible from this function
-}
-
-unsafe extern "C" fn write_callback() {
-    // Get a reference to the ProcFile instance and call its write method
-    // You'll need to store the ProcFile instance somewhere accessible from this function
-}
-
-static mut FILE_OPERATIONS: kernel::bindings::proc_ops = kernel::bindings::proc_ops {
-    proc_read: Some(read_callback),
-    proc_write: Some(write_callback),
+const fops: proc_ops = proc_ops {
+    proc_flags: 0,
+    proc_open: None,
+    proc_read: Some(my_read),
+    proc_read_iter: None,
+    proc_write: Some(my_write),
+    proc_lseek: None,
+    proc_release: None,
+    proc_poll: None,
+    proc_ioctl: None,
+    proc_mmap: None,
+    proc_get_unmapped_area: None,
 };
+
+unsafe extern "C" fn my_read(_file: *mut c_file, user_buffer: *mut c_char, count: usize, offs: *mut loff_t) -> isize {
+    let text = "Hello from a procfs file!\n";
+    let to_copy = core::cmp::min(count as usize, text.len());
+    let not_copied;
+
+    unsafe {
+        not_copied = copy_to_user(user_buffer as *mut c_void, text.as_ptr() as *const _, to_copy.try_into().unwrap());
+    }
+
+    let delta = to_copy - not_copied as usize;
+    delta.try_into().unwrap()
+}
+
+unsafe extern "C" fn my_write(_file: *mut c_file, user_buffer: *const c_char, count: usize, offs: *mut loff_t) -> isize {
+    let mut text = [0u8, 255];
+    let to_copy = core::cmp::min(count as usize, text.len());
+    let not_copied;
+    
+    unsafe {
+        not_copied = copy_from_user(text.as_ptr() as *mut c_void, user_buffer as *mut c_void, to_copy as u64);
+        pr_info!("procfs_test - You have written {} to me\n", core::str::from_utf8_unchecked(&text));
+    }
+
+    let delta = to_copy - not_copied as usize;
+    delta.try_into().unwrap()
+}
 
 impl kernel::Module for ProcFsTest {
     fn init(name: &'static CStr, module: &'static ThisModule) -> Result<Self> {
         pr_info!("Hello ProcFsTest!\n");
-        let _proc_file = ProcFile::new();
+        
+        let proc_folder: *mut proc_dir_entry;
+        let proc_file: *mut proc_dir_entry;
+
+        let folder_name: c_char = b'h' as c_char;
+        let file_name: c_char = b'f' as c_char;
+
+        unsafe {
+            proc_folder = proc_mkdir(&folder_name , null_mut());
+        } 
+        if proc_folder == null_mut() {
+            pr_info!("proc_folder is null\n");
+        }
+        pr_info!("proc_folder: {:?}\n", proc_folder);
+
+    
+        unsafe {
+            proc_file = proc_create(&file_name, 0o644, proc_folder, &fops);
+        }
+        if proc_folder == null_mut() {
+            pr_info!("proc_file is null\n");
+        }
+        pr_info!("proc_file: {:?}\n", proc_file);
+
         Ok(Self)
     }
 }
