@@ -12,12 +12,6 @@ module! {
 
 struct ProcFsTest;
 
-// struct ProcFsTest {
-//     fops: proc_ops,
-//     proc_folder: *mut proc_dir_entry,
-//     proc_file: *mut proc_dir_entry,
-// };
-
 const fops: proc_ops = proc_ops {
     proc_flags: 0,
     proc_open: None,
