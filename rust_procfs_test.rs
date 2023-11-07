@@ -2,7 +2,10 @@ use kernel::prelude::*;
 use kernel::bindings::{ proc_mkdir, proc_create, copy_to_user, copy_from_user, proc_ops, proc_dir_entry, loff_t };
 use kernel::bindings::file as c_file;
 use core::ptr::null_mut;
+use kernel::sync::Mutex;
 use core::ffi::{ c_char, c_void };
+
+static GLOBAL_DATA: Mutex<Vec<u8>> = unsafe{ Mutex::new(Vec::new()) };
 
 module! {
     type: ProcFsTest,
@@ -27,29 +30,44 @@ const fops: proc_ops = proc_ops {
 };
 
 unsafe extern "C" fn my_read(_file: *mut c_file, user_buffer: *mut c_char, count: usize, offs: *mut loff_t) -> isize {
-    let text = "Hello from a procfs file!\n";
-    let to_copy = core::cmp::min(count as usize, text.len());
+    let offset = unsafe { *offs as usize };
+    let data = GLOBAL_DATA.lock();
+
+    // If the offset is beyond the end of the string, return 0
+    if offset >= data.len() {
+        return 0;
+    }
+
+    // Otherwise, copy the remaining data to the user buffer
+    let remaining = &data[offset..];
+    let to_copy = core::cmp::min(count as usize, remaining.len());
     let not_copied;
 
     unsafe {
-        not_copied = copy_to_user(user_buffer as *mut c_void, text.as_ptr() as *const _, to_copy.try_into().unwrap());
+        not_copied = copy_to_user(user_buffer as *mut c_void, remaining.as_ptr() as *const _, to_copy.try_into().unwrap());
     }
 
     let delta = to_copy - not_copied as usize;
+    unsafe { *offs += delta as i64 };
     delta.try_into().unwrap()
 }
 
 unsafe extern "C" fn my_write(_file: *mut c_file, user_buffer: *const c_char, count: usize, offs: *mut loff_t) -> isize {
-    let mut text = [0u8, 255];
-    let to_copy = core::cmp::min(count as usize, text.len());
+    let mut buffer = [0u8, 255];
+    let to_copy = core::cmp::min(count as usize, buffer.len());
     let not_copied;
     
     unsafe {
-        not_copied = copy_from_user(text.as_ptr() as *mut c_void, user_buffer as *mut c_void, to_copy as u64);
-        pr_info!("procfs_test - You have written {} to me\n", core::str::from_utf8_unchecked(&text));
+        not_copied = copy_from_user(buffer.as_mut_ptr() as *mut c_void, user_buffer as *const _, to_copy as u64);
+        pr_info!("procfs_test - You have written {} to me\n", core::str::from_utf8_unchecked(&buffer));
     }
 
     let delta = to_copy - not_copied as usize;
+    unsafe { *offs += delta as i64 };
+
+    let mut data = GLOBAL_DATA.lock();
+    data.try_extend_from_slice(&buffer[..delta]);
+
     delta.try_into().unwrap()
 }
 
