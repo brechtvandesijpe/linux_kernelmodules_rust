@@ -1,0 +1,83 @@
+use kernel::io_buffer::{IoBufferReader, IoBufferWriter};
+use kernel::prelude::*;
+use kernel::sync::{smutex::Mutex, Ref, RefBorrow};
+use kernel::{file, miscdev};
+use kernel::fs::Registration;
+
+
+module! {
+    type: Jof,
+    name: b"joffrey",
+    license: b"GPL",
+}
+
+struct Device {
+    number: usize,
+    contents: Mutex<Vec<u8>>,
+}
+
+struct Jof {
+    _dev: Pin<Box<miscdev::Registration<Jof>>>,
+}
+
+#[vtable]
+impl file::Operations for Jof {
+    type OpenData = Ref<Device>;
+    type Data = Ref<Device>;
+
+    fn open(context: &Ref<Device>, _file: &file::File) -> Result<Ref<Device>> {
+        pr_info!("File for device {} was opened\n", context.number);
+        Ok(context.clone())
+    }
+
+    fn read(
+        data: RefBorrow<'_, Device>,
+        _file: &file::File,
+        writer: &mut impl IoBufferWriter,
+        offset: u64,
+    ) -> Result<usize> {
+        pr_info!("File for device {} was read\n", data.number);
+        let offset = offset.try_into()?;
+        let vec = data.contents.lock();
+        let len = core::cmp::min(writer.len(), vec.len().saturating_sub(offset));
+        writer.write_slice(&vec[offset..][..len])?;
+        Ok(len)
+    }
+
+    fn write(
+        data: RefBorrow<'_, Device>,
+        _file: &file::File,
+        reader: &mut impl IoBufferReader,
+        _offset: u64,
+    ) -> Result<usize> {
+        pr_info!("File for device {} was written\n", data.number);
+        let copy = reader.read_all()?;
+        let len = copy.len();
+        *data.contents.lock() = copy;
+        Ok(len)
+    }
+
+}
+impl kernel::Module for Jof {
+    fn init(_name: &'static CStr, module: &'static ThisModule) -> Result<Self> {
+        pr_info!("Hello world!\n");
+        pr_info!("JEEEEEEEEEEEEEEEEEEE\n\n\n");
+        let dev = Ref::try_new(Device { number: 0, contents: Mutex::new(Vec::new()) })?;
+        let reg = miscdev::Registration::new_pinned(fmt!("Joffrey"), dev)?;
+        Ok(Self { _dev: reg })
+    } 
+}
+
+impl Drop for Jof {
+    fn drop(&mut self) {
+        pr_info!("MODULE GETS DROPPED\n");
+        self.cleanup();
+    }
+}
+
+impl Jof {
+    fn cleanup(&mut self) {
+        pr_info!("DROP IT");
+    }
+}
+
