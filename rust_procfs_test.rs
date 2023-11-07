@@ -12,6 +12,12 @@ module! {
 
 struct ProcFsTest;
 
+// struct ProcFsTest {
+//     fops: proc_ops,
+//     proc_folder: *mut proc_dir_entry,
+//     proc_file: *mut proc_dir_entry,
+// };
+
 const fops: proc_ops = proc_ops {
     proc_flags: 0,
     proc_open: None,
@@ -60,11 +66,11 @@ impl kernel::Module for ProcFsTest {
         let proc_folder: *mut proc_dir_entry;
         let proc_file: *mut proc_dir_entry;
 
-        let folder_name: c_char = b'h' as c_char;
-        let file_name: c_char = b'f' as c_char;
+        let folder_name: *const c_char = b"hello\0".as_ptr() as *const i8;
+        let file_name: *const c_char = b"dummy\0".as_ptr() as *const i8;
 
         unsafe {
-            proc_folder = proc_mkdir(&folder_name , null_mut());
+            proc_folder = proc_mkdir(folder_name , null_mut());
         } 
         if proc_folder == null_mut() {
             pr_info!("proc_folder is null\n");
@@ -73,7 +79,7 @@ impl kernel::Module for ProcFsTest {
 
     
         unsafe {
-            proc_file = proc_create(&file_name, 0o644, proc_folder, &fops);
+            proc_file = proc_create(file_name, 0o644, proc_folder, &fops);
         }
         if proc_folder == null_mut() {
             pr_info!("proc_file is null\n");
