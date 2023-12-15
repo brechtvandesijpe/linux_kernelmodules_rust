@@ -4,6 +4,7 @@ use kernel::bindings::file as c_file;
 use core::ptr::null_mut;
 use kernel::sync::Mutex;
 use core::ffi::{ c_char, c_void };
+use core::fmt::Error;
 
 static GLOBAL_DATA: Mutex<Vec<u8>> = unsafe{ Mutex::new(Vec::new()) };
 
@@ -101,7 +102,7 @@ impl ProcDir {
         } 
         if folder == null_mut() {
             pr_info!("folder is null\n");
-            // return Err(kernel::Error::from_kernel_errno(libc::EINVAL));
+            return Err(Error.into());
         }
         pr_info!("proc_folder: {:?}\n", folder);
 
@@ -130,7 +131,7 @@ impl ProcFile {
         }
         if file == null_mut() {
             pr_info!("file is null\n");
-            // return Err(kernel::Error::from_kernel_errno(libc::EINVAL));
+            return Err(Error.into());
         }
         pr_info!("proc_file: {:?}\n", file);
 
