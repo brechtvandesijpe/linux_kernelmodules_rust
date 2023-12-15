@@ -15,7 +15,7 @@ module! {
 
 struct ProcFsTest;
 
-const fops: proc_ops = proc_ops {
+const FOPS: proc_ops = proc_ops {
     proc_flags: 0,
     proc_open: None,
     proc_read: Some(my_read),
@@ -75,29 +75,67 @@ impl kernel::Module for ProcFsTest {
     fn init(name: &'static CStr, module: &'static ThisModule) -> Result<Self> {
         pr_info!("Hello ProcFsTest!\n");
         
-        let proc_folder: *mut proc_dir_entry;
-        let proc_file: *mut proc_dir_entry;
-
-        let folder_name: *const c_char = b"hello\0".as_ptr() as *const i8;
-        let file_name: *const c_char = b"dummy\0".as_ptr() as *const i8;
-
-        unsafe {
-            proc_folder = proc_mkdir(folder_name , null_mut());
-        } 
-        if proc_folder == null_mut() {
-            pr_info!("proc_folder is null\n");
-        }
-        pr_info!("proc_folder: {:?}\n", proc_folder);
-
-    
-        unsafe {
-            proc_file = proc_create(file_name, 0o644, proc_folder, &fops);
-        }
-        if proc_folder == null_mut() {
-            pr_info!("proc_file is null\n");
-        }
-        pr_info!("proc_file: {:?}\n", proc_file);
+        let proc_dir: ProcDir = ProcDir::new("hello").unwrap();
+        let proc_file: ProcFile = ProcFile::new(proc_dir, "dummy").unwrap();
 
         Ok(Self)
+    }
+}
+
+struct ProcDir {
+    proc_folder: *mut proc_dir_entry,
+}
+
+impl ProcDir {
+    fn new(name: &str) -> Result<Self> {
+        let mut name_bytes = [0u8; 256]; // Adjust the size as needed
+        for (i, byte) in name.bytes().enumerate() {
+            name_bytes[i] = byte;
+        }
+        name_bytes[name.len()] = 0; // null termination
+        let folder_name: *const c_char = name_bytes.as_ptr() as *const c_char;
+        let mut folder: *mut proc_dir_entry;
+
+        unsafe {
+            folder = proc_mkdir(folder_name , null_mut());
+        } 
+        if folder == null_mut() {
+            pr_info!("folder is null\n");
+            // return Err(kernel::Error::from_kernel_errno(libc::EINVAL));
+        }
+        pr_info!("proc_folder: {:?}\n", folder);
+
+        Ok(Self {
+            proc_folder: folder
+        })
+    }
+}
+
+struct ProcFile {
+    proc_file: *mut proc_dir_entry,
+}
+
+impl ProcFile {
+    fn new(dir: ProcDir, name: &str) -> Result<Self> {
+        let mut name_bytes = [0u8; 256]; // Adjust the size as needed
+        for (i, byte) in name.bytes().enumerate() {
+            name_bytes[i] = byte;
+        }
+        name_bytes[name.len()] = 0; // null termination
+        let file_name: *const c_char = name_bytes.as_ptr() as *const c_char;
+        let mut file: *mut proc_dir_entry;
+        
+        unsafe {
+            file = proc_create(file_name, 0o644, dir.proc_folder, &FOPS);
+        }
+        if file == null_mut() {
+            pr_info!("file is null\n");
+            // return Err(kernel::Error::from_kernel_errno(libc::EINVAL));
+        }
+        pr_info!("proc_file: {:?}\n", file);
+
+        Ok(Self {
+            proc_file: file,
+        })
     }
 }
