@@ -207,16 +207,16 @@ extern "C" fn input_leds_connect(handler: *mut kernel::bindings::input_handler,
 }
 
 extern "C" fn input_leds_disconnect(handle: *mut kernel::bindings::input_handle) {
-    // unsafe {
-    //     let leds = (*handle).private as *mut InputLeds;
+    unsafe {
+        let leds = (*handle).private as *mut InputLeds;
 
-    //     for led in &mut (*leds).leds {
-    //         kernel::bindings::led_classdev_unregister(&mut led.cdev);
-    //     }
+        for led in &mut (*leds).leds {
+            kernel::bindings::led_classdev_unregister(&mut led.cdev);
+        }
 
-    //     kernel::bindings::input_close_device(handle);
-    //     kernel::bindings::input_unregister_handle(handle);
-    // }
+        kernel::bindings::input_close_device(handle);
+        kernel::bindings::input_unregister_handle(handle);
+    }
 }
 
 static INPUT_LEDS_IDS: [kernel::bindings::input_device_id; 2] = [
