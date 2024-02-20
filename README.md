@@ -1,0 +1,1 @@
+Zet LEDS_CLASS=y in make menuconfig
