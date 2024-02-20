@@ -80,8 +80,7 @@ macro_rules! offset_of {
 }
 
 unsafe extern "C" fn input_leds_brightness_get(cdev: *mut kernel::bindings::led_classdev)
-    -> kernel::bindings::led_brightness
-{
+    -> kernel::bindings::led_brightness {
     unsafe {
         let led = container_of!(cdev, InputLed, cdev);
         let input = (*(*led).handle).dev;
@@ -95,8 +94,7 @@ unsafe extern "C" fn input_leds_brightness_get(cdev: *mut kernel::bindings::led_
 }
 
 unsafe extern "C" fn input_leds_brightness_set(cdev: *mut kernel::bindings::led_classdev,
-    brightness: kernel::bindings::led_brightness) 
-{
+    brightness: kernel::bindings::led_brightness) {
     let led = container_of!(cdev, InputLed, cdev);
     unsafe {
         kernel::bindings::input_inject_event((*led).handle, kernel::bindings::EV_LED, (*led).code, (brightness != 0) as i32);

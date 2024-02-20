@@ -165,6 +165,7 @@ config SAMPLE_RUST_SELFTESTS
 
 config SAMPLE_RUST_INPUT_LEDS
 	tristate "Input leds module"
+	depends on LEDS_CLASS
 	help
 	  This option builds the Rust input leds module sample.
 
