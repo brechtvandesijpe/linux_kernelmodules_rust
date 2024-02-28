@@ -275,6 +275,7 @@ static mut INPUT_LEDS_HANDLER: kernel::bindings::input_handler = kernel::binding
 
 impl kernel::Module for InputLedsModule {
     fn init(_name: &'static CStr, _module: &'static ThisModule) -> Result<Self> {
+        pr_info!("Hello Rust!");
         unsafe {
             kernel::bindings::input_register_handler(&mut INPUT_LEDS_HANDLER);
         }
